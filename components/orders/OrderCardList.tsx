@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Watch } from "lucide-react";
 import { StatusBadge } from "@/components/orders/StatusBadge";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { cn } from "@/lib/utils";
+import { formatShortDate } from "@/lib/format";
 import type { OrderStatus } from "@/lib/status";
 
 export type OrderCardItem = {
@@ -31,11 +33,7 @@ export function OrderCardList({
   className?: string;
 }) {
   if (orders.length === 0) {
-    return (
-      <p className={cn("py-6 text-center text-sm text-muted-foreground", className)}>
-        {emptyLabel}
-      </p>
-    );
+    return <EmptyState icon={Watch} title={emptyLabel} className={className} />;
   }
 
   return (
@@ -44,23 +42,26 @@ export function OrderCardList({
         <li key={order.id}>
           <Link
             href={`/orders/${order.id}`}
-            className="-mx-2 flex items-center gap-3 rounded-md px-2 py-3 transition-colors active:bg-muted"
+            className="flex items-center gap-3 px-4 py-3.5 transition-colors active:bg-muted"
           >
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+              <Watch className="size-5" />
+            </span>
             <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium">{order.orderNumber}</span>
-                <StatusBadge status={order.status} />
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold">
+                  {order.watchBrand}
+                  {order.watchModel ? ` ${order.watchModel}` : ""}
+                </span>
+                <StatusBadge status={order.status} className="h-5 px-2 text-[11px]" />
               </div>
-              <p className="truncate text-sm text-muted-foreground">
-                {order.watchBrand}
-                {order.watchModel ? ` ${order.watchModel}` : ""}
+              <p className="truncate text-xs text-muted-foreground">
+                <span className="font-mono">{order.orderNumber}</span>
                 {showCustomer && order.customer ? ` · ${order.customer.name}` : ""}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {order.createdAt.toLocaleDateString("id-ID")}
+                {` · ${formatShortDate(order.createdAt)}`}
               </p>
             </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
           </Link>
         </li>
       ))}

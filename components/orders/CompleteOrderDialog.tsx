@@ -167,8 +167,8 @@ export function CompleteOrderDialog({
         }
       }}
     >
-      <DialogTrigger render={<Button size="sm" />}>
-        <CheckCircle2 className="h-4 w-4" />
+      <DialogTrigger render={<Button size="sm" variant="success" />}>
+        <CheckCircle2 />
         Selesaikan & Buat Invoice
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
@@ -181,8 +181,8 @@ export function CompleteOrderDialog({
         </DialogHeader>
         <div className="space-y-3">
           {siblingOrders.length > 0 && (
-            <div className="space-y-2 rounded-md border p-3">
-              <Label>
+            <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3">
+              <Label className="leading-snug">
                 Gabung juga dengan order lain dari {customerName ?? "customer ini"} yang masih On
                 Process?
               </Label>
@@ -206,8 +206,8 @@ export function CompleteOrderDialog({
           )}
 
           {groups.map((group, groupIndex) => (
-            <div key={group.orderId} className="space-y-2 rounded-md border p-3">
-              <Label>Rincian Biaya — {group.label}</Label>
+            <div key={group.orderId} className="space-y-3 rounded-xl border bg-muted/30 p-3">
+              <Label className="font-semibold">Rincian Biaya — {group.label}</Label>
               <div className="space-y-2">
                 {group.items.map((item, itemIndex) => (
                   <div
@@ -258,9 +258,11 @@ export function CompleteOrderDialog({
             </div>
           ))}
 
-          <div className="flex items-center justify-between border-t pt-2 text-sm font-medium">
-            <span>Total</span>
-            <span>Rp {total.toLocaleString("id-ID")}</span>
+          <div className="flex items-center justify-between rounded-xl bg-primary px-4 py-3 text-primary-foreground">
+            <span className="text-sm font-medium text-primary-foreground/70">Total Invoice</span>
+            <span className="text-lg font-bold text-brand tabular-nums">
+              Rp {total.toLocaleString("id-ID")}
+            </span>
           </div>
           <div className="space-y-2">
             <Label htmlFor="complete-note">Catatan Tambahan (opsional)</Label>

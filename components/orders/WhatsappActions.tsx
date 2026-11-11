@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, RotateCcw } from "lucide-react";
+import { Copy, MessageCircle, RotateCcw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
@@ -125,17 +126,26 @@ function TemplateDialogButton({
       }}
     >
       <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        <MessageCircle className="h-4 w-4" />
+        <MessageCircle className="text-emerald-600" />
         {label}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{label}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="grid size-8 place-items-center rounded-lg bg-emerald-50 text-emerald-600">
+              <MessageCircle className="size-4" />
+            </span>
+            {label}
+          </DialogTitle>
+          <DialogDescription>
+            Periksa & ubah pesan bila perlu, lalu buka WhatsApp untuk mengirim.
+          </DialogDescription>
         </DialogHeader>
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={8}
+          className="bg-emerald-50/40"
         />
         {text !== message && (
           <button
@@ -155,6 +165,7 @@ function TemplateDialogButton({
               toast.success("Teks disalin.");
             }}
           >
+            <Copy />
             Salin Teks
           </Button>
           <Button
@@ -167,7 +178,9 @@ function TemplateDialogButton({
               />
             }
             nativeButton={false}
+            variant="success"
           >
+            <Send />
             Buka WhatsApp
           </Button>
         </DialogFooter>

@@ -3,12 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Check, Pencil, Search, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 type Assessment = {
   estimatedPrice: number;
@@ -72,43 +79,69 @@ export function AssessmentCard({
     router.refresh();
   }
 
+  const pricePreview = Number(estimatedPrice) || 0;
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Assessment</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Search className="size-4 text-amber-600" />
+          Assessment
+        </CardTitle>
+        <CardDescription>Estimasi biaya & diagnosis teknisi.</CardDescription>
+        {assessment && !editing && assessment.decision === "PENDING" && (
+          <CardAction>
+            <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+              <Pencil />
+              Edit
+            </Button>
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {editing ? (
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="estimatedPrice">Estimasi Harga (Rp)</Label>
-              <Input
-                id="estimatedPrice"
-                type="number"
-                min={0}
-                value={estimatedPrice}
-                onChange={(e) => setEstimatedPrice(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="diagnosis">Diagnosis</Label>
-              <Textarea
-                id="diagnosis"
-                rows={3}
-                value={diagnosis}
-                onChange={(e) => setDiagnosis(e.target.value)}
-              />
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-[200px_1fr]">
+              <div className="space-y-2">
+                <Label htmlFor="estimatedPrice">Estimasi Harga</Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+                    Rp
+                  </span>
+                  <Input
+                    id="estimatedPrice"
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={estimatedPrice}
+                    onChange={(e) => setEstimatedPrice(e.target.value)}
+                    className="pl-9 tabular-nums"
+                  />
+                </div>
+                {pricePreview > 0 && (
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    = Rp {pricePreview.toLocaleString("id-ID")}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="diagnosis">Diagnosis</Label>
+                <Textarea
+                  id="diagnosis"
+                  rows={3}
+                  placeholder="Temuan teknisi, part yang perlu diganti, dll."
+                  value={diagnosis}
+                  onChange={(e) => setDiagnosis(e.target.value)}
+                />
+              </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                disabled={saving || !estimatedPrice}
-                onClick={saveEstimate}
-              >
+              <Button disabled={saving || !estimatedPrice} onClick={saveEstimate}>
+                <Check />
                 {saving ? "Menyimpan..." : "Simpan Estimasi"}
               </Button>
               {assessment && (
-                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+                <Button variant="ghost" onClick={() => setEditing(false)}>
                   Batal
                 </Button>
               )}
@@ -116,50 +149,58 @@ export function AssessmentCard({
           </div>
         ) : (
           assessment && (
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Estimasi Harga</p>
-                <p className="text-lg font-semibold">
-                  Rp {assessment.estimatedPrice.toLocaleString("id-ID")}
-                </p>
-              </div>
-              {assessment.diagnosis && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Diagnosis</p>
-                  <p className="text-sm">{assessment.diagnosis}</p>
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-[200px_1fr]">
+                <div className="rounded-xl bg-muted/50 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">Estimasi Harga</p>
+                  <p className="mt-1 text-xl font-bold tracking-tight tabular-nums">
+                    Rp {assessment.estimatedPrice.toLocaleString("id-ID")}
+                  </p>
                 </div>
-              )}
+                <div className="py-1">
+                  <p className="text-xs font-medium text-muted-foreground">Diagnosis</p>
+                  <p className="mt-1 text-sm whitespace-pre-line">
+                    {assessment.diagnosis || "—"}
+                  </p>
+                </div>
+              </div>
 
               {assessment.decision === "PENDING" ? (
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button size="sm" disabled={deciding} onClick={() => decide("APPROVED")}>
-                    Setuju
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    disabled={deciding}
-                    onClick={() => decide("REJECTED")}
-                  >
-                    Tolak
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                    Edit Estimasi
-                  </Button>
+                <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-medium text-amber-900">
+                    Menunggu keputusan customer
+                  </p>
+                  <div className="flex gap-2 *:flex-1 sm:*:flex-none">
+                    <Button
+                      variant="success"
+                      size="sm"
+                      disabled={deciding}
+                      onClick={() => decide("APPROVED")}
+                    >
+                      <ThumbsUp />
+                      Setuju
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      disabled={deciding}
+                      onClick={() => decide("REJECTED")}
+                    >
+                      <ThumbsDown />
+                      Tolak
+                    </Button>
+                  </div>
+                </div>
+              ) : assessment.decision === "APPROVED" ? (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 text-sm font-medium text-emerald-800">
+                  <Check className="size-4" />
+                  Disetujui customer
                 </div>
               ) : (
-                <Badge
-                  variant="outline"
-                  className={
-                    assessment.decision === "APPROVED"
-                      ? "border-emerald-200 bg-emerald-100 text-emerald-800"
-                      : "border-red-200 bg-red-100 text-red-800"
-                  }
-                >
-                  {assessment.decision === "APPROVED"
-                    ? "Disetujui customer"
-                    : "Ditolak customer"}
-                </Badge>
+                <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/70 px-3 py-2.5 text-sm font-medium text-rose-800">
+                  <X className="size-4" />
+                  Ditolak customer
+                </div>
               )}
             </div>
           )

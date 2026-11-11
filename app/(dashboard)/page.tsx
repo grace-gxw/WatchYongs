@@ -6,40 +6,49 @@ import {
   CheckCircle2,
   PackageCheck,
   XCircle,
+  Plus,
+  ArrowRight,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { AlertList, type AlertItem } from "@/components/dashboard/AlertList";
 import { PickupReminders } from "@/components/dashboard/PickupReminders";
-import { StatusBadge } from "@/components/orders/StatusBadge";
 import { OrderCardList } from "@/components/orders/OrderCardList";
+import { OrderTable } from "@/components/orders/OrderTable";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatWeekdayDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { daysAgo, daysSince, type OrderStatus } from "@/lib/status";
+  daysAgo,
+  daysSince,
+  STATUS_LABELS,
+  STATUS_TONE,
+  type OrderStatus,
+} from "@/lib/status";
 
 const ONPROCESS_ALERT_DAYS = 14;
 const COMPLETED_ALERT_DAYS = 7;
 const STORAGE_FEE_DAYS = 21; // diagram's "Weekly Reminder Max 3 Week" rule
 
+const STAT_CARDS: { status: OrderStatus; icon: typeof ClipboardList; hint: string }[] = [
+  { status: "INTAKE", icon: ClipboardList, hint: "Baru diterima" },
+  { status: "ASSESSMENT", icon: Search, hint: "Menunggu keputusan" },
+  { status: "ONPROCESS", icon: Wrench, hint: "Sedang dikerjakan" },
+  { status: "COMPLETED", icon: CheckCircle2, hint: "Siap diambil" },
+  { status: "PICKED", icon: PackageCheck, hint: "Sudah diserahkan" },
+  { status: "REJECTED", icon: XCircle, hint: "Customer menolak" },
+];
+
 export default async function DashboardPage() {
   const onProcessThreshold = daysAgo(ONPROCESS_ALERT_DAYS);
   const completedThreshold = daysAgo(COMPLETED_ALERT_DAYS);
 
-  const [statusCounts, onProcessOverdue, completedOverdue, recentOrders] =
+  const [user, statusCounts, onProcessOverdue, completedOverdue, recentOrders] =
     await Promise.all([
+      getCurrentUser(),
       prisma.repairOrder.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.repairOrder.findMany({
         where: { status: "ONPROCESS", statusChangedAt: { lte: onProcessThreshold } },
@@ -67,107 +76,104 @@ export default async function DashboardPage() {
       href: `/orders/${order.id}`,
       title: `${order.orderNumber} · ${order.watchBrand} (${order.customer.name})`,
       description: `Sudah ${daysSince(order.statusChangedAt)} hari di On Process. Perlu action?`,
+      tone: "warning" as const,
+      kind: "process" as const,
     })),
     ...completedOverdue.map((order) => {
       const overdueDays = daysSince(order.statusChangedAt);
-      const description =
-        overdueDays >= STORAGE_FEE_DAYS
-          ? `Sudah selesai ${overdueDays} hari (>3 minggu) — kena biaya penyimpanan.`
-          : `Sudah selesai ${overdueDays} hari, belum diambil.`;
+      const isStorageFee = overdueDays >= STORAGE_FEE_DAYS;
       return {
         id: order.id,
         href: `/orders/${order.id}`,
         title: `${order.orderNumber} · ${order.watchBrand} (${order.customer.name})`,
-        description,
+        description: isStorageFee
+          ? `Sudah selesai ${overdueDays} hari (>3 minggu) — kena biaya penyimpanan.`
+          : `Sudah selesai ${overdueDays} hari, belum diambil.`,
+        tone: isStorageFee ? ("danger" as const) : ("warning" as const),
+        kind: "pickup" as const,
       };
     }),
   ];
 
+  const activeCount =
+    countFor("INTAKE") + countFor("ASSESSMENT") + countFor("ONPROCESS") + countFor("COMPLETED");
+  const firstName = user?.name.split(" ")[0] ?? "Tim";
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold sm:text-2xl">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Ringkasan order reparasi jam saat ini.
-          </p>
-        </div>
-        <Button
-          render={<Link href="/orders/new" />}
-          nativeButton={false}
-          className="w-full sm:w-auto"
-        >
-          + Intake Baru
-        </Button>
-      </div>
+    <div className="space-y-6 sm:space-y-8">
+      <PageHeader
+        eyebrow={formatWeekdayDate(new Date())}
+        title={`Halo, ${firstName}`}
+        description={
+          <>
+            Ada <span className="font-semibold text-foreground">{activeCount} order aktif</span>
+            {alerts.length > 0 ? (
+              <>
+                {" "}
+                dan{" "}
+                <span className="font-semibold text-amber-700">
+                  {alerts.length} perlu perhatian
+                </span>
+              </>
+            ) : null}{" "}
+            hari ini.
+          </>
+        }
+        actions={
+          <>
+            <Button variant="outline" render={<Link href="/orders" />} nativeButton={false}>
+              Semua Order
+            </Button>
+            <Button render={<Link href="/orders/new" />} nativeButton={false}>
+              <Plus />
+              Intake Baru
+            </Button>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Intake" value={countFor("INTAKE")} icon={ClipboardList} />
-        <StatCard label="Assessment" value={countFor("ASSESSMENT")} icon={Search} />
-        <StatCard label="On Process" value={countFor("ONPROCESS")} icon={Wrench} />
-        <StatCard label="Completed" value={countFor("COMPLETED")} icon={CheckCircle2} />
-        <StatCard label="Sudah Diambil" value={countFor("PICKED")} icon={PackageCheck} />
-        <StatCard label="Ditolak" value={countFor("REJECTED")} icon={XCircle} />
-      </div>
-
-      <AlertList items={alerts} />
-
-      <PickupReminders orders={completedOverdue} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Order Terbaru</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <OrderCardList
-            className="md:hidden"
-            orders={recentOrders}
-            emptyLabel="Belum ada order."
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6">
+        {STAT_CARDS.map((card) => (
+          <StatCard
+            key={card.status}
+            label={STATUS_LABELS[card.status]}
+            value={countFor(card.status)}
+            icon={card.icon}
+            tone={STATUS_TONE[card.status]}
+            hint={card.hint}
+            href={`/orders?status=${card.status}`}
           />
+        ))}
+      </div>
+
+      <div className={cn("grid items-start gap-6", completedOverdue.length > 0 && "lg:grid-cols-2")}>
+        <AlertList items={alerts} />
+        <PickupReminders orders={completedOverdue} />
+      </div>
+
+      <div>
+        <Card className="gap-0 py-0">
+          <CardHeader className="border-b pt-4 sm:pt-5">
+            <CardTitle>Order Terbaru</CardTitle>
+            <CardDescription>8 order yang paling baru masuk.</CardDescription>
+            <CardAction>
+              <Button
+                variant="ghost"
+                size="sm"
+                render={<Link href="/orders" />}
+                nativeButton={false}
+              >
+                Lihat semua
+                <ArrowRight />
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <OrderCardList className="md:hidden" orders={recentOrders} emptyLabel="Belum ada order." />
           <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No. Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Jam</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Dibuat</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentOrders.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      Belum ada order.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {recentOrders.map((order) => (
-                  <TableRow key={order.id} className="cursor-pointer">
-                    <TableCell>
-                      <Link href={`/orders/${order.id}`} className="font-medium hover:underline">
-                        {order.orderNumber}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{order.customer.name}</TableCell>
-                    <TableCell>
-                      {order.watchBrand}
-                      {order.watchModel ? ` ${order.watchModel}` : ""}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={order.status} />
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {order.createdAt.toLocaleDateString("id-ID")}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <OrderTable orders={recentOrders} emptyLabel="Belum ada order." />
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }

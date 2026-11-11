@@ -1,9 +1,20 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { FileText, ClipboardList } from "lucide-react";
+import {
+  ClipboardList,
+  FileText,
+  Phone,
+  Receipt,
+  Watch,
+  Camera,
+  ListChecks,
+  History,
+  ArrowUpRight,
+} from "lucide-react";
 import { prisma } from "@/lib/db";
 import { StatusBadge } from "@/components/orders/StatusBadge";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { OrderProgress } from "@/components/orders/OrderProgress";
 import { PhotoGallery } from "@/components/orders/PhotoGallery";
 import { AddPhotoForm } from "@/components/orders/AddPhotoForm";
 import { StatusActions } from "@/components/orders/StatusActions";
@@ -14,20 +25,41 @@ import { WhatsappHistoryCard } from "@/components/orders/WhatsappHistoryCard";
 import { CompleteOrderDialog } from "@/components/orders/CompleteOrderDialog";
 import { WorkChecklist } from "@/components/orders/WorkChecklist";
 import { DeleteOrderButton } from "@/components/orders/DeleteOrderButton";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { UserAvatar } from "@/components/shared/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { formatLongDate, formatRupiah, formatShortDate } from "@/lib/format";
 import {
   daysSince,
   defaultPhotoStageFor,
   STATUS_LABELS,
   SERVICE_TYPE_LABELS,
 } from "@/lib/status";
+
+function InfoField({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="mt-1 text-sm whitespace-pre-line">{children}</dd>
+    </div>
+  );
+}
 
 export default async function OrderDetailPage({
   params,
@@ -82,91 +114,136 @@ export default async function OrderDetailPage({
       })()
     : [];
 
-  return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold sm:text-2xl">{order.orderNumber}</h1>
-            <StatusBadge status={order.status} />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {order.watchBrand}
-            {order.watchModel ? ` ${order.watchModel}` : ""} · {order.customer.name} (
-            {order.customer.phone})
-            {order.customer.ownerAge ? ` · ${order.customer.ownerAge} th` : ""}
-            {order.customer.ownerCharacter ? ` · ${order.customer.ownerCharacter}` : ""}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Sudah {daysSince(order.statusChangedAt)} hari di status{" "}
-            {STATUS_LABELS[order.status]}.
-          </p>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <Button variant="outline" size="sm" render={<Link href={`/orders/${order.id}/kartu-kerja`} />} nativeButton={false}>
-            <ClipboardList className="h-4 w-4" />
-            Kartu Kerja
-          </Button>
-          <WhatsappActions
-            orderId={order.id}
-            order={order}
-            customer={order.customer}
-            assessment={order.assessment}
-          />
-          {order.status === "ONPROCESS" && (
-            <CompleteOrderDialog
-              orderId={order.id}
-              estimatedPrice={order.assessment?.estimatedPrice ?? 0}
-              customerName={order.customer.name}
-              mainOrderNumber={order.orderNumber}
-              mainWatchBrand={order.watchBrand}
-              mainWatchModel={order.watchModel}
-              siblingOrders={siblingOrders}
-            />
-          )}
-          <StatusActions orderId={order.id} status={order.status} />
-          {!order.invoice && (
-            <DeleteOrderButton orderId={order.id} orderNumber={order.orderNumber} />
-          )}
-        </div>
-      </div>
+  const watchLabel = `${order.watchBrand}${order.watchModel ? ` ${order.watchModel}` : ""}`;
+  const daysInStatus = daysSince(order.statusChangedAt);
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="space-y-6 md:col-span-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-base">Info Jam</CardTitle>
-              <EditOrderDialog orderId={order.id} order={order} />
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {order.serviceType && (
-                <div>
-                  <p className="text-muted-foreground">Jenis Service</p>
-                  <p>{SERVICE_TYPE_LABELS[order.serviceType]}</p>
-                </div>
-              )}
-              {order.watchInfo && (
-                <div>
-                  <p className="text-muted-foreground">Info Jam</p>
-                  <p>{order.watchInfo}</p>
-                </div>
-              )}
-              {order.notes && (
-                <div>
-                  <p className="text-muted-foreground">Keterangan Masalah</p>
-                  <p>{order.notes}</p>
-                </div>
-              )}
-              <Separator />
-              <div className="space-y-3">
-                <p className="text-muted-foreground">Foto</p>
-                <PhotoGallery photos={order.photos} />
-                <AddPhotoForm
-                  key={order.status}
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        back={{ href: "/orders", label: "Order Reparasi" }}
+        title={
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span className="font-mono">{order.orderNumber}</span>
+            <StatusBadge status={order.status} className="h-7 px-3 text-[13px]" />
+          </span>
+        }
+        description={
+          <>
+            <span className="font-medium text-foreground">{watchLabel}</span> ·{" "}
+            {order.customer.name} · masuk {formatLongDate(order.createdAt)}
+          </>
+        }
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href={`/orders/${order.id}/kartu-kerja`} />}
+              nativeButton={false}
+            >
+              <ClipboardList />
+              Kartu Kerja
+            </Button>
+            {!order.invoice && (
+              <DeleteOrderButton orderId={order.id} orderNumber={order.orderNumber} />
+            )}
+          </>
+        }
+      />
+
+      {/* Progres + aksi utama untuk status saat ini. */}
+      <Card>
+        <CardContent className="space-y-5">
+          <OrderProgress status={order.status} history={order.statusHistory} />
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Sudah <span className="font-semibold text-foreground">{daysInStatus} hari</span> di
+              status {STATUS_LABELS[order.status]}.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <WhatsappActions
+                orderId={order.id}
+                order={order}
+                customer={order.customer}
+                assessment={order.assessment}
+              />
+              {order.status === "ONPROCESS" && (
+                <CompleteOrderDialog
                   orderId={order.id}
-                  defaultStage={defaultPhotoStageFor(order.status)}
+                  estimatedPrice={order.assessment?.estimatedPrice ?? 0}
+                  customerName={order.customer.name}
+                  mainOrderNumber={order.orderNumber}
+                  mainWatchBrand={order.watchBrand}
+                  mainWatchModel={order.watchModel}
+                  siblingOrders={siblingOrders}
                 />
-              </div>
+              )}
+              <StatusActions orderId={order.id} status={order.status} />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Watch className="size-4 text-muted-foreground" />
+                Info Jam
+              </CardTitle>
+              <CardAction>
+                <EditOrderDialog orderId={order.id} order={order} />
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                <InfoField label="Merk & Model">
+                  <span className="font-semibold">{watchLabel}</span>
+                </InfoField>
+                <InfoField label="Jenis Service">
+                  {order.serviceType ? (
+                    <span className="inline-flex rounded-md bg-muted px-2 py-0.5 text-xs font-semibold">
+                      {SERVICE_TYPE_LABELS[order.serviceType]}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </InfoField>
+                <InfoField label="Info Jam (serial, kelengkapan)" className="sm:col-span-2">
+                  {order.watchInfo || "—"}
+                </InfoField>
+                <InfoField label="Keterangan Masalah" className="sm:col-span-2">
+                  {order.notes ? (
+                    <span className="block rounded-xl bg-amber-50/70 px-3 py-2.5 ring-1 ring-amber-600/10">
+                      {order.notes}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </InfoField>
+              </dl>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="size-4 text-muted-foreground" />
+                Foto
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular-nums">
+                  {order.photos.length}
+                </span>
+              </CardTitle>
+              <CardDescription>Dokumentasi kondisi jam per tahap pengerjaan.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <PhotoGallery photos={order.photos} />
+              <AddPhotoForm
+                key={order.status}
+                orderId={order.id}
+                defaultStage={defaultPhotoStageFor(order.status)}
+              />
             </CardContent>
           </Card>
 
@@ -175,42 +252,53 @@ export default async function OrderDetailPage({
           {order.invoice && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Invoice</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {otherInvoiceOrders.length > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Invoice ini juga mencakup:{" "}
-                    {otherInvoiceOrders.map((o) => o.orderNumber).join(", ")}
-                  </p>
-                )}
-                {ownInvoiceItems.length > 0 && (
-                  <div className="space-y-1">
-                    {ownInvoiceItems.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between">
-                        <span className="text-muted-foreground">{item.description}</span>
-                        <span>Rp {item.amount.toLocaleString("id-ID")}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="font-medium">{order.invoice.invoiceNumber}</p>
-                    <p className="text-muted-foreground">
-                      Rp {order.invoice.amount.toLocaleString("id-ID")} ·{" "}
-                      {order.invoice.createdAt.toLocaleDateString("id-ID")}
-                    </p>
-                  </div>
-                  <a
-                    href={order.invoice.pdfPath}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="size-4 text-muted-foreground" />
+                  Invoice
+                  <span className="font-mono text-sm font-medium text-muted-foreground">
+                    {order.invoice.invoiceNumber}
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Dibuat {formatLongDate(order.invoice.createdAt)}
+                  {otherInvoiceOrders.length > 0 &&
+                    ` · juga mencakup ${otherInvoiceOrders.map((o) => o.orderNumber).join(", ")}`}
+                </CardDescription>
+                <CardAction>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    render={<a href={order.invoice.pdfPath} target="_blank" rel="noreferrer" />}
+                    nativeButton={false}
                   >
-                    <FileText className="h-4 w-4" />
+                    <FileText />
                     Lihat PDF
-                  </a>
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {ownInvoiceItems.length > 0 && (
+                  <ul className="divide-y rounded-xl border">
+                    {ownInvoiceItems.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm"
+                      >
+                        <span className="text-muted-foreground">{item.description}</span>
+                        <span className="font-medium tabular-nums">
+                          {formatRupiah(item.amount)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className="flex items-center justify-between rounded-xl bg-primary px-4 py-3 text-primary-foreground">
+                  <span className="text-sm text-primary-foreground/70">
+                    Total Invoice{otherInvoiceOrders.length > 0 ? " (gabungan)" : ""}
+                  </span>
+                  <span className="text-lg font-bold text-brand tabular-nums">
+                    {formatRupiah(order.invoice.amount)}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -219,19 +307,75 @@ export default async function OrderDetailPage({
           <WhatsappHistoryCard logs={order.whatsappLogs} />
         </div>
 
-        <div className="space-y-6">
+        {/* Kolom samping: di layar sedang tampil 2 kolom di bawah konten utama. */}
+        <div className="grid content-start gap-6 md:grid-cols-2 xl:grid-cols-1">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Checklist Pengerjaan</CardTitle>
+              <CardTitle>Customer</CardTitle>
+              <CardAction>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Buka profil customer"
+                  render={<Link href={`/customers/${order.customer.id}`} />}
+                  nativeButton={false}
+                >
+                  <ArrowUpRight />
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Link href={`/customers/${order.customer.id}`} className="flex items-center gap-3">
+                <UserAvatar name={order.customer.name} size="md" />
+                <div className="min-w-0">
+                  <p className="truncate font-semibold hover:underline">{order.customer.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Customer sejak {formatShortDate(order.customer.createdAt)}
+                  </p>
+                </div>
+              </Link>
+              <a
+                href={`tel:${order.customer.phone}`}
+                className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm font-medium transition-colors hover:bg-muted"
+              >
+                <Phone className="size-4 text-muted-foreground" />
+                {order.customer.phone}
+              </a>
+              {(order.customer.ownerAge || order.customer.ownerCharacter) && (
+                <div className="flex flex-wrap gap-1.5">
+                  {order.customer.ownerAge && (
+                    <span className="rounded-md bg-muted px-2 py-1 text-xs font-medium">
+                      {order.customer.ownerAge} tahun
+                    </span>
+                  )}
+                  {order.customer.ownerCharacter && (
+                    <span className="rounded-md bg-brand-soft px-2 py-1 text-xs font-medium text-brand-foreground">
+                      {order.customer.ownerCharacter}
+                    </span>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ListChecks className="size-4 text-muted-foreground" />
+                Checklist Pengerjaan
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <WorkChecklist status={order.status} />
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="md:col-span-2 xl:col-span-1">
             <CardHeader>
-              <CardTitle className="text-base">Timeline</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <History className="size-4 text-muted-foreground" />
+                Timeline
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <OrderTimeline history={order.statusHistory} />

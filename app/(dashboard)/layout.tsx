@@ -16,10 +16,11 @@ export default async function DashboardLayout({
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <Sidebar user={user} />
-      <main className="min-w-0 flex-1 overflow-y-auto bg-muted/20 p-4 md:p-8">
-        {children}
+      {/* pb besar di HP: memberi ruang untuk navigasi bawah yang fixed. */}
+      <main className="min-w-0 flex-1 px-4 pt-5 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 md:px-8 md:py-8 lg:px-10">
+        <div className="mx-auto w-full max-w-7xl">{children}</div>
       </main>
-      <Toaster />
+      <Toaster theme="light" richColors closeButton mobileOffset={{ bottom: 96 }} />
     </div>
   );
 }

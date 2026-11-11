@@ -18,13 +18,63 @@ export const STATUS_LABELS: Record<OrderStatusType, string> = {
 };
 
 export const STATUS_BADGE_CLASS: Record<OrderStatusType, string> = {
-  INTAKE: "bg-blue-100 text-blue-800 border-blue-200",
-  ASSESSMENT: "bg-amber-100 text-amber-800 border-amber-200",
-  ONPROCESS: "bg-violet-100 text-violet-800 border-violet-200",
-  COMPLETED: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  PICKED: "bg-gray-100 text-gray-700 border-gray-200",
-  REJECTED: "bg-red-100 text-red-800 border-red-200",
+  INTAKE: "bg-sky-50 text-sky-700 ring-sky-600/20",
+  ASSESSMENT: "bg-amber-50 text-amber-800 ring-amber-600/25",
+  ONPROCESS: "bg-violet-50 text-violet-700 ring-violet-600/20",
+  COMPLETED: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  PICKED: "bg-slate-100 text-slate-600 ring-slate-500/20",
+  REJECTED: "bg-rose-50 text-rose-700 ring-rose-600/20",
 };
+
+export const STATUS_DOT_CLASS: Record<OrderStatusType, string> = {
+  INTAKE: "bg-sky-500",
+  ASSESSMENT: "bg-amber-500",
+  ONPROCESS: "bg-violet-500",
+  COMPLETED: "bg-emerald-500",
+  PICKED: "bg-slate-400",
+  REJECTED: "bg-rose-500",
+};
+
+// Tone dipakai komponen yang butuh warna status di luar badge (kartu
+// statistik, ikon timeline) supaya warnanya konsisten di semua halaman.
+export type Tone = "sky" | "amber" | "violet" | "emerald" | "slate" | "rose" | "brand" | "ink";
+
+export const STATUS_TONE: Record<OrderStatusType, Tone> = {
+  INTAKE: "sky",
+  ASSESSMENT: "amber",
+  ONPROCESS: "violet",
+  COMPLETED: "emerald",
+  PICKED: "slate",
+  REJECTED: "rose",
+};
+
+export const TONE_ICON_CLASS: Record<Tone, string> = {
+  sky: "bg-sky-50 text-sky-600 ring-sky-600/15",
+  amber: "bg-amber-50 text-amber-600 ring-amber-600/15",
+  violet: "bg-violet-50 text-violet-600 ring-violet-600/15",
+  emerald: "bg-emerald-50 text-emerald-600 ring-emerald-600/15",
+  slate: "bg-slate-100 text-slate-500 ring-slate-500/15",
+  rose: "bg-rose-50 text-rose-600 ring-rose-600/15",
+  brand: "bg-brand-soft text-brand-foreground ring-brand/25",
+  ink: "bg-primary text-primary-foreground ring-primary/10",
+};
+
+// Urutan normal sebuah order dari diterima sampai diambil — dipakai
+// stepper progres di halaman detail order.
+export const STATUS_FLOW: OrderStatusType[] = [
+  "INTAKE",
+  "ASSESSMENT",
+  "ONPROCESS",
+  "COMPLETED",
+  "PICKED",
+];
+
+export const ACTIVE_STATUSES: OrderStatusType[] = [
+  "INTAKE",
+  "ASSESSMENT",
+  "ONPROCESS",
+  "COMPLETED",
+];
 
 // Manual forward transitions available as generic buttons on the order
 // detail page. ASSESSMENT -> ONPROCESS/REJECTED and ONPROCESS -> COMPLETED

@@ -3,8 +3,8 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PhotoPicker } from "@/components/orders/PhotoPicker";
 import { PHOTO_STAGE_LABELS, type PhotoStage } from "@/lib/status";
 
 const STAGES: PhotoStage[] = ["INTAKE", "ASSESSMENT", "COMPLETION"];
@@ -58,10 +59,13 @@ export function AddPhotoForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-      <div className="space-y-1">
+    <form onSubmit={onSubmit} className="space-y-3 rounded-xl bg-muted/40 p-3">
+      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        Tambah Foto
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
         <Select value={stage} onValueChange={(v) => setStage(v as PhotoStage)}>
-          <SelectTrigger size="sm" className="w-full sm:w-40">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue>{(value: PhotoStage) => PHOTO_STAGE_LABELS[value]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -72,23 +76,20 @@ export function AddPhotoForm({
             ))}
           </SelectContent>
         </Select>
+        <PhotoPicker
+          id={`add-photo-${orderId}`}
+          files={files}
+          onChange={setFiles}
+          compact
+          className="flex-1"
+        />
       </div>
-      <Input
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic"
-        multiple
-        className="w-full sm:max-w-xs"
-        onChange={(e) => setFiles(e.target.files)}
-      />
-      <Button
-        type="submit"
-        size="sm"
-        variant="secondary"
-        disabled={submitting}
-        className="w-full sm:w-auto"
-      >
-        {submitting ? "Mengupload..." : "+ Tambah Foto"}
-      </Button>
+      {files && files.length > 0 && (
+        <Button type="submit" disabled={submitting} className="w-full sm:w-auto">
+          <Upload />
+          {submitting ? "Mengupload..." : `Upload ${files.length} Foto`}
+        </Button>
+      )}
     </form>
   );
 }

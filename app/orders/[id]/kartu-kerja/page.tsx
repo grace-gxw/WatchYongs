@@ -4,6 +4,7 @@ import { ArrowLeft, FileText } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { PrintButton } from "@/components/orders/PrintButton";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/shared/BrandLogo";
 import { getWorkChecklist, SERVICE_TYPE_LABELS } from "@/lib/status";
 
 function ChecklistBox({ checked }: { checked: boolean }) {
@@ -23,11 +24,12 @@ function ChecklistBox({ checked }: { checked: boolean }) {
 // dipakai mulai sm dan saat dicetak.
 function Field({ no, label, value }: { no: number; label: string; value: React.ReactNode }) {
   return (
-    <div className="flex flex-col border-b border-dashed py-2 text-sm last:border-b-0 sm:flex-row sm:gap-3 print:flex-row print:gap-3">
-      <span className="shrink-0 text-muted-foreground sm:w-48 print:w-48">
-        {no}. {label}
+    <div className="flex flex-col border-b border-dashed border-neutral-300 py-2.5 text-sm last:border-b-0 sm:flex-row sm:gap-3 print:flex-row print:gap-3">
+      <span className="shrink-0 text-neutral-500 sm:w-48 print:w-48">
+        <span className="inline-block w-6 font-mono text-xs">{no}.</span>
+        {label}
       </span>
-      <span className="flex-1 break-words">{value ?? "-"}</span>
+      <span className="flex-1 font-medium break-words">{value ?? "-"}</span>
     </div>
   );
 }
@@ -51,11 +53,11 @@ export default async function KartuKerjaPage({
   const watchLabel = `${order.watchBrand}${order.watchModel ? ` ${order.watchModel}` : ""}`;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 sm:p-6">
+    <div className="mx-auto w-full max-w-2xl space-y-4 p-4 sm:p-8 print:p-0">
       <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
         <Link
           href={`/orders/${order.id}`}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Kembali
@@ -80,13 +82,21 @@ export default async function KartuKerjaPage({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white p-4 text-black sm:p-6 print:p-6">
-        <div className="mb-4 flex items-center justify-between border-b pb-3">
-          <div>
-            <p className="text-lg font-bold">WatchYongs</p>
-            <p className="text-xs text-muted-foreground">Kartu Kerja Reparasi Jam</p>
+      <div className="rounded-2xl border bg-white p-5 text-black shadow-card sm:p-8 print:rounded-none print:border-0 print:p-0 print:shadow-none">
+        <div className="mb-5 flex items-center justify-between gap-4 border-b-2 border-black pb-4">
+          <div className="flex items-center gap-3">
+            <BrandMark className="size-11 text-black" />
+            <div>
+              <p className="text-lg leading-tight font-bold">WatchYongs</p>
+              <p className="text-xs text-neutral-500">Kartu Kerja Reparasi Jam</p>
+            </div>
           </div>
-          <p className="text-sm font-medium">{order.orderNumber}</p>
+          <div className="text-right">
+            <p className="text-[10px] font-semibold tracking-widest text-neutral-500 uppercase">
+              No. Order
+            </p>
+            <p className="font-mono text-lg font-bold">{order.orderNumber}</p>
+          </div>
         </div>
 
         <Field no={1} label="Nomor" value={order.orderNumber} />
@@ -110,25 +120,25 @@ export default async function KartuKerjaPage({
         />
 
         <div className="mt-2 flex flex-col py-2 text-sm sm:flex-row sm:gap-3 print:flex-row print:gap-3">
-          <span className="shrink-0 text-muted-foreground sm:w-48 print:w-48">Progress</span>
+          <span className="shrink-0 text-neutral-500 sm:w-48 print:w-48">Progress</span>
           <div className="flex-1 space-y-2">
             <div className="flex items-center gap-2">
-              <span className="w-5 text-muted-foreground">10.</span>
+              <span className="w-6 font-mono text-xs text-neutral-500">10.</span>
               <ChecklistBox checked={checklist.dropJam} />
               <span>Drop Jam</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-5 text-muted-foreground">11.</span>
+              <span className="w-6 font-mono text-xs text-neutral-500">11.</span>
               <ChecklistBox checked={checklist.onProses} />
               <span>Onproses</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-5 text-muted-foreground">12.</span>
+              <span className="w-6 font-mono text-xs text-neutral-500">12.</span>
               <ChecklistBox checked={checklist.selesai} />
               <span>Selesai</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-5 text-muted-foreground">13.</span>
+              <span className="w-6 font-mono text-xs text-neutral-500">13.</span>
               <ChecklistBox checked={checklist.ambilJam} />
               <span>Ambil Jam</span>
             </div>

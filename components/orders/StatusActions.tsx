@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ArrowRight, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ALLOWED_TRANSITIONS, STATUS_LABELS, type OrderStatus } from "@/lib/status";
 
@@ -46,7 +47,12 @@ export function StatusActions({
           disabled={loading !== null}
           onClick={() => move(next)}
         >
-          {loading === next ? "Memproses..." : `→ ${STATUS_LABELS[next]}`}
+          {next === "REJECTED" ? <Ban /> : <ArrowRight />}
+          {loading === next
+            ? "Memproses..."
+            : next === "REJECTED"
+              ? "Tolak Order"
+              : `Pindah ke ${STATUS_LABELS[next]}`}
         </Button>
       ))}
     </div>

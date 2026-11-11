@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/db";
 import { IntakeForm } from "@/components/orders/IntakeForm";
+import { PageHeader } from "@/components/shared/PageHeader";
+
+export const metadata = { title: "Intake Baru" };
 
 export default async function NewOrderPage() {
   const customers = await prisma.customer.findMany({
@@ -8,13 +11,13 @@ export default async function NewOrderPage() {
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Intake Baru</h1>
-        <p className="text-sm text-muted-foreground">
-          Catat jam yang baru diterima dari customer.
-        </p>
-      </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <PageHeader
+        back={{ href: "/orders", label: "Order Reparasi" }}
+        eyebrow="Order baru"
+        title="Intake Jam"
+        description="Catat jam yang baru diterima dari customer. Nomor order dibuat otomatis."
+      />
       <IntakeForm customers={customers} />
     </div>
   );

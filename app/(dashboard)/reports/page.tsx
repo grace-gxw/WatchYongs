@@ -1,9 +1,26 @@
 import Link from "next/link";
-import { Wallet, CalendarDays, Receipt, TrendingUp } from "lucide-react";
+import {
+  Wallet,
+  CalendarDays,
+  Receipt,
+  TrendingUp,
+  Download,
+  ChevronRight,
+  FileText,
+} from "lucide-react";
 import { prisma } from "@/lib/db";
 import { StatCard } from "@/components/dashboard/StatCard";
+import { MonthlyRevenueChart } from "@/components/reports/MonthlyRevenueChart";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { EmptyState } from "@/components/shared/EmptyState";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -12,22 +29,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatRupiah, formatShortDate } from "@/lib/format";
 import { SERVICE_TYPE_LABELS, ServiceType, type ServiceType as ServiceTypeType } from "@/lib/status";
 
-function formatRupiah(amount: number) {
-  return `Rp ${amount.toLocaleString("id-ID")}`;
-}
+export const metadata = { title: "Laporan" };
 
 function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function monthLabel(key: string) {
+function monthDate(key: string) {
   const [year, month] = key.split("-").map(Number);
-  return new Date(year, month - 1, 1).toLocaleDateString("id-ID", {
-    month: "short",
-    year: "numeric",
-  });
+  return new Date(year, month - 1, 1);
 }
 
 export default async function ReportsPage() {
@@ -61,7 +74,6 @@ export default async function ReportsPage() {
       bucket.count += 1;
     }
   }
-  const maxMonthRevenue = Math.max(1, ...monthBuckets.map((b) => b.revenue));
 
   // Item invoice sekarang ditandai per-order (repairOrderId), jadi revenue per order bisa dihitung
   // akurat dari item yang benar-benar milik order itu. Invoice lama (dibuat sebelum item ditandai
@@ -105,200 +117,216 @@ export default async function ReportsPage() {
     })
     .filter((row) => row !== null);
 
+  const chartBuckets = monthBuckets.map((b) => ({
+    ...b,
+    label: monthDate(b.key).toLocaleDateString("id-ID", { month: "short" }),
+    fullLabel: monthDate(b.key).toLocaleDateString("id-ID", { month: "long", year: "numeric" }),
+  }));
+  const yearRevenue = monthBuckets.reduce((sum, b) => sum + b.revenue, 0);
+  const serviceRevenueTotal = serviceBreakdown.reduce((sum, row) => sum + row.revenue, 0);
+  const thisMonthCount = bucketByKey.get(thisMonthKey)?.count ?? 0;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold sm:text-2xl">Laporan</h1>
-          <p className="text-sm text-muted-foreground">Ringkasan pendapatan dari invoice.</p>
-        </div>
-        <Button
-          variant="outline"
-          render={<a href="/api/reports/export" />}
-          nativeButton={false}
-          className="w-full sm:w-auto"
-        >
-          Export CSV
-        </Button>
-      </div>
+      <PageHeader
+        title="Laporan"
+        description="Ringkasan pendapatan dari invoice yang sudah diterbitkan."
+        actions={
+          <Button variant="outline" render={<a href="/api/reports/export" />} nativeButton={false}>
+            <Download />
+            Export CSV
+          </Button>
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Total Pendapatan" value={formatRupiah(totalRevenue)} icon={Wallet} />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
-          label="Pendapatan Bulan Ini"
+          label="Total Pendapatan"
+          value={formatRupiah(totalRevenue)}
+          icon={Wallet}
+          hint="Sepanjang waktu"
+          highlight
+        />
+        <StatCard
+          label="Bulan Ini"
           value={formatRupiah(thisMonthRevenue)}
           icon={CalendarDays}
+          tone="brand"
+          hint={`${thisMonthCount} invoice`}
         />
-        <StatCard label="Jumlah Invoice" value={invoiceCount} icon={Receipt} />
-        <StatCard label="Rata-rata per Invoice" value={formatRupiah(avgInvoice)} icon={TrendingUp} />
+        <StatCard
+          label="Jumlah Invoice"
+          value={invoiceCount}
+          icon={Receipt}
+          tone="sky"
+          hint="Total diterbitkan"
+        />
+        <StatCard
+          label="Rata-rata / Invoice"
+          value={formatRupiah(avgInvoice)}
+          icon={TrendingUp}
+          tone="emerald"
+          hint="Nilai rata-rata"
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Pendapatan per Bulan (12 bulan terakhir)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {monthBuckets.map((bucket) => (
-            <div key={bucket.key} className="flex items-center gap-2 text-xs sm:gap-3 sm:text-sm">
-              <span className="w-14 shrink-0 text-muted-foreground sm:w-16">
-                {monthLabel(bucket.key)}
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Pendapatan per Bulan</CardTitle>
+            <CardDescription>
+              12 bulan terakhir ·{" "}
+              <span className="font-semibold text-foreground tabular-nums">
+                {formatRupiah(yearRevenue)}
               </span>
-              <div className="h-2 min-w-8 flex-1 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${(bucket.revenue / maxMonthRevenue) * 100}%` }}
-                />
-              </div>
-              <span className="w-24 shrink-0 text-right text-muted-foreground sm:w-32">
-                {formatRupiah(bucket.revenue)}
-              </span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MonthlyRevenueChart buckets={chartBuckets} currentKey={thisMonthKey} />
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Berdasarkan Jenis Service</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="divide-y md:hidden">
+        <Card>
+          <CardHeader>
+            <CardTitle>Berdasarkan Jenis Service</CardTitle>
+            <CardDescription>Rata-rata waktu dihitung dari intake sampai invoice.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
             {serviceBreakdown.length === 0 && (
-              <li className="py-6 text-center text-sm text-muted-foreground">
-                Belum ada invoice.
-              </li>
+              <p className="py-6 text-center text-sm text-muted-foreground">Belum ada invoice.</p>
             )}
-            {serviceBreakdown.map((row) => (
-              <li key={row.label} className="space-y-1 py-3 text-sm first:pt-0 last:pb-0">
-                <p className="font-medium">{row.label}</p>
-                <div className="flex justify-between text-muted-foreground">
-                  <span>{row.count} order</span>
-                  <span>{formatRupiah(row.revenue)}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Rata-rata {row.avgDays} hari (intake → selesai)
-                </p>
-              </li>
-            ))}
-          </ul>
-
-          <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Jenis Service</TableHead>
-                  <TableHead className="text-right">Jumlah Order</TableHead>
-                  <TableHead className="text-right">Total Pendapatan</TableHead>
-                  <TableHead className="text-right">Rata-rata Waktu (Intake → Selesai)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {serviceBreakdown.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
-                      Belum ada invoice.
-                    </TableCell>
-                  </TableRow>
-                )}
-                {serviceBreakdown.map((row) => (
-                  <TableRow key={row.label}>
-                    <TableCell>{row.label}</TableCell>
-                    <TableCell className="text-right">{row.count}</TableCell>
-                    <TableCell className="text-right">{formatRupiah(row.revenue)}</TableCell>
-                    <TableCell className="text-right">{row.avgDays} hari</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Semua Invoice {invoices.length > 50 && `(50 terbaru dari ${invoices.length})`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="divide-y md:hidden">
-            {invoices.length === 0 && (
-              <li className="py-6 text-center text-sm text-muted-foreground">
-                Belum ada invoice.
-              </li>
-            )}
-            {invoices.slice(0, 50).map((invoice) => (
-              <li key={invoice.id}>
-                <Link
-                  href={`/orders/${invoice.orders[0]?.id}`}
-                  className="-mx-2 block space-y-1 rounded-md px-2 py-3 transition-colors active:bg-muted"
-                >
+            {serviceBreakdown.map((row) => {
+              const share = serviceRevenueTotal > 0 ? (row.revenue / serviceRevenueTotal) * 100 : 0;
+              return (
+                <div key={row.label} className="space-y-2.5 rounded-xl border p-3.5">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm font-medium">{invoice.invoiceNumber}</span>
-                    <span className="text-sm font-medium">{formatRupiah(invoice.amount)}</span>
+                    <p className="text-sm font-semibold">{row.label}</p>
+                    <p className="text-xs font-medium text-muted-foreground tabular-nums">
+                      {Math.round(share)}% pendapatan
+                    </p>
                   </div>
-                  <p className="truncate text-sm text-muted-foreground">
-                    {invoice.orders.map((o) => o.orderNumber).join(", ")} &middot;{" "}
-                    {invoice.orders[0]?.customer.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {invoice.orders[0]?.serviceType
-                      ? SERVICE_TYPE_LABELS[invoice.orders[0].serviceType]
-                      : "-"}{" "}
-                    &middot; {invoice.createdAt.toLocaleDateString("id-ID")}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${share}%` }} />
+                  </div>
+                  <dl className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <dt className="text-muted-foreground">Order</dt>
+                      <dd className="font-semibold tabular-nums">{row.count}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-muted-foreground">Pendapatan</dt>
+                      <dd className="font-semibold break-words tabular-nums">
+                        {formatRupiah(row.revenue)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Rata-rata</dt>
+                      <dd className="font-semibold tabular-nums">{row.avgDays} hari</dd>
+                    </div>
+                  </dl>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
 
-          <div className="hidden md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>No. Invoice</TableHead>
-                  <TableHead>No. Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Jenis Service</TableHead>
-                  <TableHead className="text-right">Tanggal</TableHead>
-                  <TableHead className="text-right">Jumlah</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      Belum ada invoice.
-                    </TableCell>
+      <Card className="gap-0 py-0">
+        <CardHeader className="border-b pt-4 sm:pt-5">
+          <CardTitle>Semua Invoice</CardTitle>
+          <CardDescription>
+            {invoices.length > 50
+              ? `50 terbaru dari ${invoices.length} invoice · lihat semua lewat Export CSV`
+              : `${invoices.length} invoice`}
+          </CardDescription>
+        </CardHeader>
+
+        {invoices.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="Belum ada invoice"
+            description="Invoice dibuat otomatis saat order diselesaikan."
+          />
+        ) : (
+          <>
+            <ul className="divide-y md:hidden">
+              {invoices.slice(0, 50).map((invoice) => (
+                <li key={invoice.id}>
+                  <Link
+                    href={`/orders/${invoice.orders[0]?.id}`}
+                    className="flex items-center gap-3 px-4 py-3.5 transition-colors active:bg-muted"
+                  >
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+                      <Receipt className="size-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-mono text-sm font-semibold">
+                          {invoice.invoiceNumber}
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums">
+                          {formatRupiah(invoice.amount)}
+                        </span>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {invoice.orders[0]?.customer.name} ·{" "}
+                        {invoice.orders.map((o) => o.orderNumber).join(", ")} ·{" "}
+                        {formatShortDate(invoice.createdAt)}
+                      </p>
+                    </div>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>No. Invoice</TableHead>
+                    <TableHead>Order</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Jenis Service</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                    <TableHead className="text-right">Jumlah</TableHead>
                   </TableRow>
-                )}
-                {invoices.slice(0, 50).map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell>
-                      <Link
-                        href={`/orders/${invoice.orders[0]?.id}`}
-                        className="font-medium hover:underline"
-                      >
-                        {invoice.invoiceNumber}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{invoice.orders.map((o) => o.orderNumber).join(", ")}</TableCell>
-                    <TableCell>{invoice.orders[0]?.customer.name}</TableCell>
-                    <TableCell>
-                      {invoice.orders[0]?.serviceType
-                        ? SERVICE_TYPE_LABELS[invoice.orders[0].serviceType]
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {invoice.createdAt.toLocaleDateString("id-ID")}
-                    </TableCell>
-                    <TableCell className="text-right">{formatRupiah(invoice.amount)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+                </TableHeader>
+                <TableBody>
+                  {invoices.slice(0, 50).map((invoice) => (
+                    <TableRow key={invoice.id} className="relative cursor-pointer">
+                      <TableCell>
+                        <Link
+                          href={`/orders/${invoice.orders[0]?.id}`}
+                          className="font-mono text-[13px] font-semibold after:absolute after:inset-0 after:content-['']"
+                        >
+                          {invoice.invoiceNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {invoice.orders.map((o) => o.orderNumber).join(", ")}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {invoice.orders[0]?.customer.name}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {invoice.orders[0]?.serviceType
+                          ? SERVICE_TYPE_LABELS[invoice.orders[0].serviceType]
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {formatShortDate(invoice.createdAt)}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">
+                        {formatRupiah(invoice.amount)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
       </Card>
     </div>
   );
