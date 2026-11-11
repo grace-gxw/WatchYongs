@@ -2,6 +2,7 @@ import "server-only";
 
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { uploadPath } from "@/lib/uploads";
 import { prisma } from "@/lib/db";
 import { generateInvoiceNumber } from "@/lib/order-number";
 import { generateInvoicePdf } from "@/lib/invoice-pdf";
@@ -54,7 +55,7 @@ export async function ensureInvoice(
     diagnosis: mainOrder.assessment?.diagnosis ?? null,
   });
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "invoices");
+  const uploadDir = uploadPath("invoices");
   await mkdir(uploadDir, { recursive: true });
   const filename = `invoice-${invoiceNumber}.pdf`;
   await writeFile(path.join(uploadDir, filename), pdfBuffer);

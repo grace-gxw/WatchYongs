@@ -5,8 +5,13 @@ import { prisma } from "../lib/db";
 // Safe to run on every deploy: only ensures the admin account exists,
 // never touches customers/orders (unlike prisma/seed.ts, which is demo-data
 // only and wipes existing rows — do not run that one in production).
+// The password only applies when the admin account is first created; set
+// ADMIN_INITIAL_PASSWORD in production so the public default isn't used.
 async function main() {
-  const passwordHash = await bcrypt.hash("watchyoung123", 10);
+  const passwordHash = await bcrypt.hash(
+    process.env.ADMIN_INITIAL_PASSWORD || "watchyoung123",
+    10,
+  );
   await prisma.user.upsert({
     where: { email: "admin@watchyoung.local" },
     update: {},

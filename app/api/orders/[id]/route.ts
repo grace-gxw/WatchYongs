@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { rm } from "node:fs/promises";
-import path from "node:path";
+import { uploadPath } from "@/lib/uploads";
 import { prisma } from "@/lib/db";
 import { ServiceType } from "@/lib/status";
 
@@ -90,7 +90,7 @@ export async function DELETE(
   }
 
   await prisma.repairOrder.delete({ where: { id } });
-  await rm(path.join(process.cwd(), "public", "uploads", id), {
+  await rm(uploadPath(id), {
     recursive: true,
     force: true,
   });

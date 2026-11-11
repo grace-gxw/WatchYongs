@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { uploadPath } from "@/lib/uploads";
 import { prisma } from "@/lib/db";
 import type { PhotoStage } from "@/lib/status";
 
@@ -42,7 +43,7 @@ export async function saveUploadedPhotos(
 ) {
   if (files.length === 0) return [];
 
-  const uploadDir = path.join(process.cwd(), "public", "uploads", orderId);
+  const uploadDir = uploadPath(orderId);
   await mkdir(uploadDir, { recursive: true });
 
   const created = [];

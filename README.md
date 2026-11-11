@@ -43,6 +43,10 @@ Buka [http://localhost:3000](http://localhost:3000). Login dengan akun seed:
 - Detail order: timeline status, update status, assessment (estimasi harga + Setuju/Tolak)
 - Data customer & riwayat order-nya
 
+## Deploy
+
+Langkah deploy ke Hostinger (database, environment variables, folder upload): lihat [DEPLOY-HOSTINGER.md](DEPLOY-HOSTINGER.md).
+
 ## Backup & Restore Database
 
 Tombol **"Backup Database"** di halaman `/users` men-download dump `.sql` lengkap (via `mysqldump`) dari database MySQL/MariaDB yang sedang dipakai.
